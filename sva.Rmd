@@ -1,0 +1,23 @@
+---
+title: "Surrogate Variable Analysis"
+output: html_document
+---
+
+## Load Data
+
+```{r}
+download.file("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData", "bottomly_eset.RData")
+load("bottomly_eset.RData")
+
+# Build a DESeqDataSet
+library(Biobase)
+count.matrix <- exprs(bottomly.eset)
+col.data <- pData(bottomly.eset) 
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(count.matrix, col.data, design=~strain)
+
+dds$experiment.number <- factor(dds$experiment.number)
+
+dds <- estimateSizeFactors(dds)
+```
+

@@ -1,0 +1,48 @@
+---
+title: "Gene count matrix"
+output: html_document
+---
+
+To build a count matrix using BAM files and a GTF file with gene annotation.
+
+Tocount RNA -seqfragments from a single sample
+
+```{r message=FALSE, warning=FALSE}
+# Load a single BAM files for a paired-end sequencing experiment:
+
+library(pasillaBamSubset)
+bam.file <- untreated3_chr4()
+library(Rsamtools)
+bf <- BamFile(bam.file)
+
+# Obtain the exons-by-gene object 'ebg' using this TxDb:
+
+library(TxDb.Dmelanogaster.UCSC.dm3.ensGene)
+txdb <- TxDb.Dmelanogaster.UCSC.dm3.ensGene
+
+library(GenomicFeatures)
+ebg <- exonsBy(txdb, by="gene")
+```
+
+What is the chromosome of the first gene in 'ebg'?
+```{r}
+ebg[[1]]
+```
+
+Subset to only the genes on chromosome 4
+
+```{r}
+chr4.idx <- all(seqnames(ebg) == "chr4")
+ebg.sub <- ebg[chr4.idx]
+```
+
+Count the fragments in the genes in 'ebg.sub'.
+
+How many fragments are there for the first gene, FBgn0002521?
+
+```{r}
+library(GenomicAlignments)
+se <- summarizeOverlaps(ebg.sub, bf, singleEnd=FALSE, ignore.strand=TRUE)
+assay(se)[1]
+```
+

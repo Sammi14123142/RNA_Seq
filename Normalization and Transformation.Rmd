@@ -1,0 +1,75 @@
+---
+title: "Normalization and Transformation"
+output: html_document
+---
+
+To estimate a correction for sequencing depth and perform simple EDA of the samples by cell type.
+
+## Data
+
+```{r}
+download.file("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/wang_eset.RData", "wang_eset.RData")
+load("wang_eset.RData")
+```
+
+Take a subset of the count matrix and the column data for building a DESeqDataSet:
+
+```{r message=FALSE,warning=FALSE}
+library(Biobase)
+count.matrix <- exprs(wang.eset)[,10:21]
+col.data <- pData(wang.eset)[10:21,]
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(count.matrix, col.data, design=~cell.type)
+dds$cell.type
+```
+
+Levels of cell.type with no associated samples are dropped.
+
+
+
+## Q1. What tissue has the highest size factor?
+
+```{r}
+sizeFac <- estimateSizeFactors(dds)
+sizeFac$cell.type[which.max(sizeFac$sizeFactor)]
+```
+
+
+
+## Q2. What sample clusters with cerebellum? 
+
+Run the varianceStabilizingTransformation() transformation (blind=FALSE) on the counts, save this to an object 'vsd', and then make a PCA plot with "cell.type" as the color of the points.
+
+```{r}
+vsd <- varianceStabilizingTransformation(dds, blind=FALSE)
+plotPCA(vsd, intgroup="cell.type")
+```
+
+
+
+## Q3. Which tissue in 'mat' has the highest correlation to skeletal muscle? 
+
+Make a scatterplot matrix of some of the samples' transformed counts.
+
+```{r}
+rmeans <- rowMeans(assay(vsd)) # row mean of rlog-transformed data
+idx <- c(1,2,10,7,8,9,12) # pick some samples for visualization
+mat <- assay(vsd)[rmeans > 1,idx] # pull out a small matrix of rlog-transformed counts
+colnames(mat) <- vsd$cell.type[idx] # name the columns of matrix by cell type
+
+panel.sub <- function(x,y,...) points(cbind(x,y)[sample(length(x),1000),],...)
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)  {
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- abs(cor(x, y))
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste0(prefix, txt)
+  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+pairs(mat, asp=1, col=rgb(0,0,0,.3), lower.panel=panel.cor, upper.panel=panel.sub)
+
+colnames(mat[,-7])[ which.max(cor(mat[,7], mat[,-7])) ]
+```
+

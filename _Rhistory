@@ -1,0 +1,28 @@
+mat = cbind(c(1,1,0,1,0),c(1,1,1,1,1),c(0,1,1,0,1))
+mat
+lengths = c(100,200,300,100,100)
+mat = cbind(c(1,1,0,1,0),c(1,1,1,1,1),c(0,1,1,0,1))
+#The length of the transcripts is then:
+lengths %*% mat
+w <- 1000
+counts = c(125,350,300,125,100)
+theta.hat = c(1, 2, 3) / 10000
+mat %*% theta.hat * lengths * w
+LHS = counts/(lengths * w)
+lm.fit(mat, LHS)$coefficients
+mat %*% theta.hat * lengths * w
+counts2 <- c(60,320,420,60,140)
+counts2 <- c(60,320,420,60,140)
+LHS2 <- counts2/(lengths*w)
+lm.fit(mat, LHS2)$coef
+setwd("~/RNAseq/Rs")
+start <- function(pkg){
+npkg <- pkg[!(pkg %in% installed.packages()[,"Package"])]
+if (length(npkg))
+install.packages(npkg, dependencies = TRUE)
+lapply(pkg, require, character.only=TRUE)
+}
+pkgs <- c("rafalib", "ggplot2", "doParallel")
+start(pkgs)
+source("http://www.bioconductor.org/biocLite.R")
+biocLite("bumphunter")

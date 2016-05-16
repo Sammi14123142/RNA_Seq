@@ -1,0 +1,91 @@
+---
+title: "Differential Gene Expression Analysis"
+output: html_document
+---
+
+## Data
+
+```{r}
+download.file("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/wang_eset.RData", "wang_eset.RData")
+load("wang_eset.RData")
+```
+
+Take a subset of the count matrix and the column data for building a DESeqDataSet:
+
+```{r message=FALSE,warning=FALSE}
+library(Biobase)
+count.matrix <- exprs(wang.eset)[,10:21]
+col.data <- pData(wang.eset)[10:21,]
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(count.matrix, col.data, design=~cell.type)
+dds$cell.type
+```
+
+Levels of cell.type with no associated samples are dropped.
+
+Now we make a new factor column in the colData of dds, which is "brain" for the cerebellum and mixed brain samples, and "other" for the other samples. We set "other" as the reference level (the denominator for the fold changes).
+
+```{r}
+dds$type <- factor(ifelse(dds$cell.type %in% c("cerebellum","mixed.brain"), 
+                          "brain", "other"))
+dds$type <- relevel(dds$type, "other")
+
+#Now reset the design of the DESeqDataSet:
+
+design(dds) <- ~ type
+```
+
+
+
+## Q1. What is the name of the gene (ENSG...) with the smallest adjusted p-value in 'res'?
+
+Run the differential expression function, and create the default results table 'res' for comparing brain vs other. 
+```{r}
+dds <- DESeq(dds)
+res <- results(dds)
+rownames(res)[which.min(res$padj)]
+```
+
+
+
+## Q2. How many genes in the set with FDR less than 0.1 have a positive LFC?
+
+Create a results table 'res2', but this time with a lfcThresold of 2. 
+
+```{r}
+res2 <- results(dds, lfcThreshold=2)
+table(res2$padj < 0.1 & res2$log2FoldChange > 0)
+```
+
+A counts plot for the gene with the smallest adjusted p-value.
+
+```{r}
+par(mfrow=c(1,1))
+plotCounts(dds, which.min(res$padj), intgroup="type")
+```
+
+Normalised counts plots for the top 4 genes:
+
+```{r}
+par(mfrow=c(2,2))
+for (i in 1:4)
+  plotCounts(dds, order(res$padj)[i], intgroup="type")
+```
+
+## Q3. Use org.Hs.eg.db to determine the gene symbol of the gene with largest test statistic. What is the SYMBOL?
+
+```{r}
+top <- rownames(res)[head(order(res$stat, decreasing=TRUE), 1)]
+library(org.Hs.eg.db)
+
+select(org.Hs.eg.db, keys=top, columns="SYMBOL", keytype="ENSEMBL")
+```
+
+
+
+## Q4. What is the GENENAME of the top gene?
+
+```{r}
+select(org.Hs.eg.db, keys=top, columns="GENENAME", keytype="ENSEMBL")
+```
+
